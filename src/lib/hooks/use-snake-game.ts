@@ -46,9 +46,9 @@ export function useSnakeGame() {
   });
 
   const moveSnake = useCallback(() => {
-    if (gameState.isGameOver || !gameState.hasStarted) return;
-
     setGameState(prevState => {
+      if (prevState.isGameOver || !prevState.hasStarted) return prevState;
+
       // Check if snake array is empty
       if (!prevState.snake || prevState.snake.length === 0) {
         console.error('Snake array is empty or undefined');
@@ -114,7 +114,7 @@ export function useSnakeGame() {
         score: newScore,
       };
     });
-  }, [gameState.isGameOver, gameState.hasStarted]);
+  }, []);
 
   const changeDirection = useCallback((newDirection: Direction) => {
     setGameState(prevState => {

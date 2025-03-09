@@ -9,6 +9,7 @@ export interface GameState {
   direction: Direction;
   isGameOver: boolean;
   score: number;
+  hasStarted: boolean;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';

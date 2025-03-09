@@ -23,9 +23,7 @@ export function GameBoard() {
       return;
     }
 
-    gameLoopRef.current = setInterval(() => {
-      moveSnake();
-    }, GAME_SPEED);
+    gameLoopRef.current = setInterval(moveSnake, GAME_SPEED);
 
     return () => {
       if (gameLoopRef.current) {
@@ -37,6 +35,11 @@ export function GameBoard() {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       e.preventDefault();
+      
+      if (gameState.isGameOver && e.code === 'Enter') {
+        resetGame();
+        return;
+      }
       
       switch (e.code) {
         case 'ArrowUp':
