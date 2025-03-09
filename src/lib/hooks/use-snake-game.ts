@@ -42,10 +42,11 @@ export function useSnakeGame() {
     direction: 'RIGHT',
     isGameOver: false,
     score: 0,
+    hasStarted: false
   });
 
   const moveSnake = useCallback(() => {
-    if (gameState.isGameOver) return;
+    if (gameState.isGameOver || !gameState.hasStarted) return;
 
     setGameState(prevState => {
       // Check if snake array is empty
@@ -113,10 +114,13 @@ export function useSnakeGame() {
         score: newScore,
       };
     });
-  }, [gameState.isGameOver]);
+  }, [gameState.isGameOver, gameState.hasStarted]);
 
   const changeDirection = useCallback((newDirection: Direction) => {
     setGameState(prevState => {
+      // Don't start the game if it's game over
+      if (prevState.isGameOver) return prevState;
+
       // Prevent 180-degree turns
       const invalidMove =
         (prevState.direction === 'UP' && newDirection === 'DOWN') ||
@@ -129,6 +133,7 @@ export function useSnakeGame() {
       return {
         ...prevState,
         direction: newDirection,
+        hasStarted: true
       };
     });
   }, []);
@@ -140,6 +145,7 @@ export function useSnakeGame() {
       direction: 'RIGHT',
       isGameOver: false,
       score: 0,
+      hasStarted: false
     });
   }, []);
 
