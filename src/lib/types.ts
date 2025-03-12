@@ -3,13 +3,20 @@ export interface Position {
   y: number;
 }
 
+export type FoodType = 'regular' | 'teleport' | 'reverse';
+
+export interface Food extends Position {
+  type: FoodType;
+}
+
 export interface GameState {
   snake: Position[];
-  food: Position;
+  food: Food;
   direction: Direction;
   isGameOver: boolean;
   score: number;
   hasStarted: boolean;
+  isPaused: boolean;
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
@@ -19,3 +26,6 @@ export const GRID_SIZE = 20;
 export const CELL_SIZE = 20;
 export const GAME_SPEED = 150; // 毫秒
 export const INITIAL_SNAKE_LENGTH = 3;
+export const TELEPORT_FOOD_CHANCE = 0.3; // 30% chance to spawn teleport food
+export const REVERSE_FOOD_CHANCE = 0.2; // 20% chance to spawn reverse food
+export const MIN_DISTANCE_FROM_EDGE = 5; // Minimum distance from map edges for teleportation
