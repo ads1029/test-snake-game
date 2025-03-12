@@ -23,6 +23,9 @@ export function GameBoard() {
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   const particleIdRef = useRef(0);
+  const prevFoodRef = useRef(gameState.food);
+  const [teleportIndicator, setTeleportIndicator] = useState<Position | null>(null);
+  const [teleportMoveCount, setTeleportMoveCount] = useState<number>(0);
 
   useEffect(() => {
     setIsClient(true);
@@ -47,6 +50,11 @@ export function GameBoard() {
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Allow browser refresh shortcuts (Command/Control + R)
+      if (e.metaKey || e.ctrlKey) {
+        return;
+      }
+      
       e.preventDefault();
       
       if (gameState.isGameOver && e.code === 'Enter') {
@@ -77,69 +85,80 @@ export function GameBoard() {
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [changeDirection, resetGame, gameState.isGameOver]);
-  
-  useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      // Implement simple touch controls if needed
-    };
-  }, []);
-
-  const prevFoodRef = useRef(gameState.food);
 
   useEffect(() => {
     if (gameState.food !== prevFoodRef.current) {
-      // Food position changed, meaning the snake ate the food
-      createExplosion(prevFoodRef.current.x, prevFoodRef.current.y);
+      // Create particles for all food types
+      const numParticles = Math.floor(Math.random() * 9) + 1; // Random number between 1-10
+      const particleColor = prevFoodRef.current.type === 'teleport' ? '#fbbf24' :
+                          prevFoodRef.current.type === 'reverse' ? '#3b82f6' :
+                          '#dc2626';
+      
+      const newParticles: Particle[] = [];
+      const baseX = prevFoodRef.current.x * CELL_SIZE + CELL_SIZE / 2;
+      const baseY = prevFoodRef.current.y * CELL_SIZE + CELL_SIZE / 2;
+      
+      for (let i = 0; i < numParticles; i++) {
+        const randomAngle = Math.random() * Math.PI * 2;
+        const randomDistance = Math.random() * 10;
+        const randomSpeed = 3 + Math.random() * 4; // Random speed between 3-7
+        
+        newParticles.push({
+          id: particleIdRef.current++,
+          x: baseX + Math.cos(randomAngle) * randomDistance,
+          y: baseY + Math.sin(randomAngle) * randomDistance,
+          velocityX: Math.cos(randomAngle) * randomSpeed,
+          velocityY: Math.sin(randomAngle) * randomSpeed,
+          opacity: 1,
+          color: particleColor
+        })
+      }
+      setParticles(newParticles);
+
+      // Animate particles
+      const animateParticles = () => {
+        setParticles(currentParticles => 
+          currentParticles
+            .map(p => ({
+              ...p,
+              x: p.x + p.velocityX,
+              y: p.y + p.velocityY,
+              opacity: p.opacity - 0.02
+            }))
+            .filter(p => p.opacity > 0)
+        );
+      };
+
+      const animationInterval = setInterval(animateParticles, 16);
+      setTimeout(() => {
+        clearInterval(animationInterval);
+        setParticles([]);
+      }, 1000);
+
+      if (prevFoodRef.current.type === 'teleport') {
+        setTeleportIndicator(prevFoodRef.current);
+        setTeleportMoveCount(0);
+      }
       prevFoodRef.current = gameState.food;
     }
-  }, [gameState.food]);
 
-  const createExplosion = (x: number, y: number) => {
-    const isTeleportFood = gameState.food.type === 'teleport';
-    const numParticles = 4 + Math.floor(Math.random() * 2); // 4-5 particles
-    const newParticles: Particle[] = [];
-
-    for (let i = 0; i < numParticles; i++) {
-      const angle = (Math.PI * 2 * i) / numParticles + Math.random() * 0.5;
-      const speed = 2 + Math.random() * 2;
-      
-      newParticles.push({
-        id: particleIdRef.current++,
-        x: x * CELL_SIZE + CELL_SIZE / 2,
-        y: y * CELL_SIZE + CELL_SIZE / 2,
-        velocityX: Math.cos(angle) * speed,
-        velocityY: Math.sin(angle) * speed,
-        opacity: 1,
-        color: isTeleportFood ? '#fbbf24' : '#dc2626' // Yellow for teleport food, red for regular food
+    // Clear teleport indicator after snake moves its current length number of times
+    if (teleportIndicator) {
+      setTeleportMoveCount(prev => {
+        const nextCount = prev + 1;
+        if (nextCount >= gameState.snake.length) {
+          setTeleportIndicator(null);
+          return 0;
+        }
+        return nextCount;
       });
     }
-
-    setParticles(prev => [...prev, ...newParticles]);
-
-    // Animate particles
-    const animateParticles = () => {
-      setParticles(prev =>
-        prev.map(particle => ({
-          ...particle,
-          x: particle.x + particle.velocityX,
-          y: particle.y + particle.velocityY,
-          opacity: particle.opacity - 0.05
-        })).filter(particle => particle.opacity > 0)
-      );
-    };
-
-    const animationInterval = setInterval(animateParticles, 16);
-    setTimeout(() => {
-      clearInterval(animationInterval);
-      setParticles([]);
-    }, 1000);
-  };
-
-  useEffect(() => {
-    console.log('游戏状态更新:', gameState);
-  }, [gameState]);
+  }, [gameState.food, gameState.snake]);
 
   const getCellContent = (position: Position) => {
+    if (teleportIndicator && teleportIndicator.x === position.x && teleportIndicator.y === position.y) {
+      return 'teleport-indicator';
+    }
     if (gameState.snake.some(segment => segment.x === position.x && segment.y === position.y)) {
       return 'snake';
     }
@@ -175,10 +194,13 @@ export function GameBoard() {
                 (gameState.snake[0].x === x && gameState.snake[0].y === y ? '#4ade80' : '#16a34a')
                 : cellContent === 'food' ? '#dc2626' 
                 : cellContent === 'teleport-food' ? '#fbbf24' 
+                : cellContent === 'teleport-indicator' ? '#fef011'
                 : cellContent === 'reverse-food' ? '#3b82f6' 
                 : 'transparent',
               boxShadow: cellContent === 'snake' ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-              border: '1px solid #374151'
+              border: '1px solid #374151',
+              transition: cellContent === 'teleport-indicator' ? 'opacity 1s' : 'none',
+              // opacity: cellContent === 'teleport-indicator' ? 0.6 : 1
             };
             
             return (
@@ -231,7 +253,6 @@ export function GameBoard() {
           <div className="flex flex-col items-center gap-2">
             <p className="text-red-500 font-bold">Game Over!</p>
             <Button onClick={resetGame}>Play Again</Button>
-            
           </div>
         )}
       </div>

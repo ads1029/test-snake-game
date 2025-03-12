@@ -40,40 +40,35 @@ function createInitialSnake(): Position[] {
   }));
 }
 
-function generateFood(snake: Position[]): Food {
+function generateFood(snake: Position[], prevFood?: Food): Food {
   // Determine food type
   const random = Math.random();
   let foodType: FoodType;
-  // if (random < TELEPORT_FOOD_CHANCE) {
-  //   foodType = 'teleport';
-  // } else if (random < TELEPORT_FOOD_CHANCE + REVERSE_FOOD_CHANCE) {
-  //   foodType = 'reverse';
-  // } else {
-  //   foodType = 'regular';
-  // }
-  foodType = "reverse"
-  
-  // 使用固定的种子初始化食物位置
-  const initialFood: Food = {
-    x: 5,
-    y: 5,
-    type: foodType
-  };
-  
-  // 检查初始食物位置是否与蛇重叠
-  if (!snake.some(segment => segment.x === initialFood.x && segment.y === initialFood.y)) {
-    return initialFood;
+  if (random < TELEPORT_FOOD_CHANCE) {
+    foodType = 'teleport';
+  } else if (random < TELEPORT_FOOD_CHANCE + REVERSE_FOOD_CHANCE) {
+    foodType = 'reverse';
+  } else {
+    foodType = 'regular';
   }
   
-  // 如果重叠，使用原来的随机生成逻辑
   let food: Food;
+  let attempts = 0;
+  const maxAttempts = 100;
+
   do {
     food = {
       x: Math.floor(Math.random() * GRID_SIZE),
       y: Math.floor(Math.random() * GRID_SIZE),
       type: foodType
     };
-  } while (snake.some(segment => segment.x === food.x && segment.y === food.y));
+    attempts++;
+  } while (
+    (snake.some(segment => segment.x === food.x && segment.y === food.y) ||
+    (prevFood && food.x === prevFood.x && food.y === prevFood.y)) &&
+    attempts < maxAttempts
+  );
+
   return food;
 }
 
