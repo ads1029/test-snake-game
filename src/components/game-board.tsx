@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Position, CELL_SIZE, GRID_SIZE, GAME_SPEED } from '@/lib/types';
 import { useSnakeGame } from '@/lib/hooks/use-snake-game';
 import { Button } from '@/components/ui/button';
-
+import { Analytics } from "@vercel/analytics/react"
 
 interface Particle {
   id: number;
@@ -26,7 +26,8 @@ export function GameBoard() {
   const prevFoodRef = useRef(gameState.food);
   const [teleportIndicator, setTeleportIndicator] = useState<Position | null>(null);
   const [teleportMoveCount, setTeleportMoveCount] = useState<number>(0);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [lastDirection, setLastDirection] = useState<string | null>(null);
+  const directionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,65 +158,50 @@ export function GameBoard() {
     }
   }, [gameState.food, gameState.snake]);
 
-  useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!touchStartRef.current) return;
-      
-      const touch = e.changedTouches[0];
-      const endX = touch.clientX;
-      const endY = touch.clientY;
-      
-      const startX = touchStartRef.current.x;
-      const startY = touchStartRef.current.y;
-      
-      const diffX = endX - startX;
-      const diffY = endY - startY;
-      
-      // Minimum swipe distance to trigger direction change (in pixels)
-      const minSwipeDistance = 30;
-      
-      // Determine swipe direction based on which axis had the larger movement
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        // Horizontal swipe
-        if (Math.abs(diffX) > minSwipeDistance) {
-          if (diffX > 0) {
-            changeDirection('RIGHT');
-          } else {
-            changeDirection('LEFT');
-          }
-        }
-      } else {
-        // Vertical swipe
-        if (Math.abs(diffY) > minSwipeDistance) {
-          if (diffY > 0) {
-            changeDirection('DOWN');
-          } else {
-            changeDirection('UP');
-          }
-        }
-      }
-      
-      touchStartRef.current = null;
-    };
-
-    const boardElement = boardRef.current;
-    if (boardElement) {
-      boardElement.addEventListener('touchstart', handleTouchStart);
-      boardElement.addEventListener('touchend', handleTouchEnd);
+  // Handle pan gestures with Framer Motion
+  const handlePan = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // Minimum swipe distance to trigger direction change
+    const minSwipeDistance = 10;
+    
+    // Get the offset and velocity
+    const { offset, velocity } = info;
+    
+    // Only process if we've moved enough distance or with enough velocity
+    if (Math.abs(offset.x) < minSwipeDistance && 
+        Math.abs(offset.y) < minSwipeDistance && 
+        Math.abs(velocity.x) < 0.5 && 
+        Math.abs(velocity.y) < 0.5) {
+      return;
     }
-
-    return () => {
-      if (boardElement) {
-        boardElement.removeEventListener('touchstart', handleTouchStart);
-        boardElement.removeEventListener('touchend', handleTouchEnd);
+    
+    // Determine new direction
+    let newDirection: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+    
+    if (Math.abs(offset.x) > Math.abs(offset.y)) {
+      // Horizontal swipe
+      newDirection = offset.x > 0 ? 'RIGHT' : 'LEFT';
+    } else {
+      // Vertical swipe
+      newDirection = offset.y > 0 ? 'DOWN' : 'UP';
+    }
+    
+    // Prevent the same direction from being triggered multiple times in quick succession
+    if (newDirection !== lastDirection) {
+      // Clear any existing debounce timer
+      if (directionDebounceRef.current) {
+        clearTimeout(directionDebounceRef.current);
       }
-    };
-  }, [changeDirection]);
+      
+      // Set the new direction
+      setLastDirection(newDirection);
+      changeDirection(newDirection);
+      
+      // Debounce to prevent too many direction changes
+      directionDebounceRef.current = setTimeout(() => {
+        setLastDirection(null);
+      }, 100);
+    }
+  };
 
   const getCellContent = (position: Position) => {
     if (teleportIndicator && teleportIndicator.x === position.x && teleportIndicator.y === position.y) {
@@ -237,13 +223,16 @@ export function GameBoard() {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div 
+      <motion.div 
         ref={boardRef}
         style={{ 
           width: `${boardSize}px`, 
-          height: `${boardSize}px` 
+          height: `${boardSize}px`,
+          touchAction: 'none' // Prevent browser handling of touch gestures
         }}
-        className="relative bg-gray-100 rounded-lg overflow-hidden touch-none"
+        className="relative bg-gray-100 rounded-lg overflow-hidden"
+        onPan={handlePan}
+        whileTap={{ cursor: 'grabbing' }}
       >
         {isClient && Array.from({ length: GRID_SIZE }, (_, y) =>
           Array.from({ length: GRID_SIZE }, (_, x) => {
@@ -276,7 +265,7 @@ export function GameBoard() {
           })
         )}
         {!isClient && <p className="text-center p-10">加载中...</p>}
-        
+        <Analytics />
         <AnimatePresence>
           {particles.map(particle => (
             <motion.div
@@ -301,12 +290,12 @@ export function GameBoard() {
             />
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
       
       <div className="flex flex-col items-center gap-2">
         <p className="text-xl font-bold">Score: {gameState.score}</p>
         {isClient && !gameState.hasStarted && !gameState.isGameOver && (
-          <div className=" items-center justify-center bg-black bg-opacity-50 text-white">
+          <div className="items-center justify-center bg-black bg-opacity-50 text-white">
             <div className="text-center p-4 bg-gray-800 rounded-lg">
               <div className="mb-4 space-y-2 text-sm">
                 <p>🍎 红色普通食物 </p>
@@ -315,6 +304,7 @@ export function GameBoard() {
               </div>
               <p className="text-xl font-bold mb-2">准备开始</p>
               <p>按方向键开始游戏</p>
+              <p className="mt-2 text-sm">或在屏幕上滑动控制方向</p>
             </div>
           </div>
         )}
