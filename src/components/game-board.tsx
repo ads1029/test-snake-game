@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Position, CELL_SIZE, GRID_SIZE, GAME_SPEED } from '@/lib/types';
 import { useSnakeGame } from '@/lib/hooks/use-snake-game';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+
 
 interface Particle {
   id: number;
@@ -171,6 +171,7 @@ export function GameBoard() {
   };
 
   const boardSize = GRID_SIZE * CELL_SIZE;
+  const teleportOpacity = teleportIndicator ? Math.max(0.2, 1 - (teleportMoveCount / gameState.snake.length)) : 0;
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -199,8 +200,8 @@ export function GameBoard() {
                 : 'transparent',
               boxShadow: cellContent === 'snake' ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
               border: '1px solid #374151',
-              transition: cellContent === 'teleport-indicator' ? 'opacity 1s' : 'none',
-              // opacity: cellContent === 'teleport-indicator' ? 0.6 : 1
+              transition: cellContent === 'teleport-indicator' ? 'opacity 0.3s' : 'none',
+              opacity: cellContent === 'teleport-indicator' ? teleportOpacity : 1
             };
             
             return (
