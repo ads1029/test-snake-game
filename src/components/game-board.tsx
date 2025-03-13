@@ -251,7 +251,7 @@ export function GameBoard() {
                 : cellContent === 'reverse-food' ? '#3b82f6' 
                 : 'transparent',
               boxShadow: cellContent === 'snake' ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-              border: '1px solid #374151',
+              border: cellContent === 'snake' ? 'none' : '1px solid #4b5563',
               transition: cellContent === 'teleport-indicator' ? 'opacity 0.3s' : 'none',
               opacity: cellContent === 'teleport-indicator' ? teleportOpacity : 1
             };

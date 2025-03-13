@@ -24,7 +24,7 @@ export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 // 添加这些缺失的常量
 export const GRID_SIZE = 20;
 export const CELL_SIZE = 20;
-export const GAME_SPEED = 150; // 毫秒
+export const GAME_SPEED = 220; // 毫秒 - bigger digit -> slower speed
 export const INITIAL_SNAKE_LENGTH = 3;
 export const TELEPORT_FOOD_CHANCE = 1/3; // 33.33% chance to spawn teleport food
 export const REVERSE_FOOD_CHANCE = 1/3; // 33.33% chance to spawn reverse food
