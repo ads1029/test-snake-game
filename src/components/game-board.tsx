@@ -310,7 +310,18 @@ export function GameBoard() {
         )}
         {gameState.isGameOver && (
           <div className="flex flex-col items-center gap-2">
-            <p className="text-red-500 font-bold">Game Over!</p>
+        
+            <p 
+              className="text-red-500 font-bold border-2 border-red-500 rounded-md px-4 py-2"
+              style={{ color: 'red' }} // Adding inline style for testing
+              onClick={() => {
+                console.log('Game Over text clicked');
+                const computedStyle = window.getComputedStyle(document.querySelector('.text-red-500')!);
+                console.log('Computed color:', computedStyle.color);
+              }}
+            >
+              Game Over!
+            </p>
             <Button onClick={resetGame}>Play Again</Button>
           </div>
         )}
