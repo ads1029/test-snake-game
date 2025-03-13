@@ -245,6 +245,11 @@ export function GameBoard() {
         {isClient && !gameState.hasStarted && !gameState.isGameOver && (
           <div className=" items-center justify-center bg-black bg-opacity-50 text-white">
             <div className="text-center p-4 bg-gray-800 rounded-lg">
+              <div className="mb-4 space-y-2 text-sm">
+                <p>🍎 红色普通食物 </p>
+                <p>🌟 黄色传送食物 </p>
+                <p>🔄 蓝色反向食物 </p>
+              </div>
               <p className="text-xl font-bold mb-2">准备开始</p>
               <p>按方向键开始游戏</p>
             </div>
