@@ -26,6 +26,8 @@ export function GameBoard() {
   const prevFoodRef = useRef(gameState.food);
   const [teleportIndicator, setTeleportIndicator] = useState<Position | null>(null);
   const [teleportMoveCount, setTeleportMoveCount] = useState<number>(0);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -155,6 +157,66 @@ export function GameBoard() {
     }
   }, [gameState.food, gameState.snake]);
 
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      
+      const touch = e.changedTouches[0];
+      const endX = touch.clientX;
+      const endY = touch.clientY;
+      
+      const startX = touchStartRef.current.x;
+      const startY = touchStartRef.current.y;
+      
+      const diffX = endX - startX;
+      const diffY = endY - startY;
+      
+      // Minimum swipe distance to trigger direction change (in pixels)
+      const minSwipeDistance = 30;
+      
+      // Determine swipe direction based on which axis had the larger movement
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Horizontal swipe
+        if (Math.abs(diffX) > minSwipeDistance) {
+          if (diffX > 0) {
+            changeDirection('RIGHT');
+          } else {
+            changeDirection('LEFT');
+          }
+        }
+      } else {
+        // Vertical swipe
+        if (Math.abs(diffY) > minSwipeDistance) {
+          if (diffY > 0) {
+            changeDirection('DOWN');
+          } else {
+            changeDirection('UP');
+          }
+        }
+      }
+      
+      touchStartRef.current = null;
+    };
+
+    const boardElement = boardRef.current;
+    if (boardElement) {
+      boardElement.addEventListener('touchstart', handleTouchStart);
+      boardElement.addEventListener('touchend', handleTouchEnd);
+    }
+
+    return () => {
+      if (boardElement) {
+        boardElement.removeEventListener('touchstart', handleTouchStart);
+        boardElement.removeEventListener('touchend', handleTouchEnd);
+      }
+    };
+  }, [changeDirection]);
+
   const getCellContent = (position: Position) => {
     if (teleportIndicator && teleportIndicator.x === position.x && teleportIndicator.y === position.y) {
       return 'teleport-indicator';
@@ -176,11 +238,12 @@ export function GameBoard() {
   return (
     <div className="flex flex-col items-center gap-4">
       <div 
+        ref={boardRef}
         style={{ 
           width: `${boardSize}px`, 
           height: `${boardSize}px` 
         }}
-        className="relative bg-gray-100 rounded-lg overflow-hidden"
+        className="relative bg-gray-100 rounded-lg overflow-hidden touch-none"
       >
         {isClient && Array.from({ length: GRID_SIZE }, (_, y) =>
           Array.from({ length: GRID_SIZE }, (_, x) => {
