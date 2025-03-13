@@ -5,7 +5,7 @@ import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Position, CELL_SIZE, GRID_SIZE, GAME_SPEED } from '@/lib/types';
 import { useSnakeGame } from '@/lib/hooks/use-snake-game';
 import { Button } from '@/components/ui/button';
-
+import { Analytics } from "@vercel/analytics/react"
 
 interface Particle {
   id: number;
@@ -265,7 +265,7 @@ export function GameBoard() {
           })
         )}
         {!isClient && <p className="text-center p-10">加载中...</p>}
-        
+        <Analytics />
         <AnimatePresence>
           {particles.map(particle => (
             <motion.div
